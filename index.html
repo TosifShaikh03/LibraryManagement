@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Library Management System</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+  <div class="bg-white p-8 rounded shadow-md w-96">
+    <!-- Role Selection -->
+    <div id="role-selection" class="text-center">
+      <h1 class="text-2xl font-bold mb-4">Library Management System</h1>
+      <p class="mb-4">Select your role:</p>
+      <button onclick="selectRole('librarian')" class="bg-blue-500 text-white px-4 py-2 rounded w-full mb-2 hover:bg-blue-600">Librarian</button>
+      <button onclick="selectRole('student')" class="bg-green-500 text-white px-4 py-2 rounded w-full hover:bg-green-600">Student</button>
+    </div>
+
+    <!-- Librarian Password Prompt -->
+    <div id="librarian-password" class="hidden text-center">
+      <h2 class="text-xl font-bold mb-4">Librarian Access</h2>
+      <input id="librarian-password-input" type="password" placeholder="Enter Librarian Password" class="w-full p-2 mb-4 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <button onclick="verifyLibrarianPassword()" class="bg-blue-500 text-white px-4 py-2 rounded w-full hover:bg-blue-600">Submit</button>
+      <p id="password-error" class="text-red-500 mt-2 hidden">Incorrect password. Please try again.</p>
+      <button onclick="backToRoleSelection()" class="text-blue-500 mt-4 hover:underline">Back</button>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Initialize Password (only if not set)
+      if (!localStorage.getItem('librarianPassword')) {
+        localStorage.setItem('librarianPassword', 'as23');
+        console.log('Initialized librarianPassword to as23');
+      }
+
+      window.selectRole = function(role) { 
+        console.log('Selected role:', role);
+        const roleSelection = document.getElementById('role-selection');
+        const librarianPassword = document.getElementById('librarian-password');
+        if (!roleSelection || !librarianPassword) {
+          console.error('DOM elements not found:', { roleSelection, librarianPassword });
+          alert('Error: Page elements not found. Please refresh.');
+          return;
+        }
+        roleSelection.style.display = 'none';
+        if (role === 'librarian') {
+          librarianPassword.style.display = 'block';
+        } else {
+          console.log('Redirecting to student-dashboard.html');
+          window.location.href = 'student-dashboard.html';
+        }
+      };
+
+      window.verifyLibrarianPassword = function() {
+        const password = document.getElementById('librarian-password-input')?.value.trim();
+        const correctPassword = localStorage.getItem('librarianPassword');
+        const passwordError = document.getElementById('password-error');
+        if (!password || !passwordError) {
+          console.error('Password input or error element not found');
+          alert('Error: Form elements not found. Please refresh.');
+          return;
+        }
+        console.log('Login attempt - Input password:', password);
+        console.log('Login attempt - Stored password:', correctPassword);
+        if (password === correctPassword) {
+          console.log('Librarian password verified');
+          passwordError.style.display = 'none';
+          window.location.href = 'librarian-dashboard.html';
+        } else {
+          console.log('Incorrect librarian password');
+          passwordError.style.display = 'block';
+          document.getElementById('librarian-password-input').value = '';
+        }
+      };
+
+      window.backToRoleSelection = function() {
+        console.log('Returning to role selection');
+        const roleSelection = document.getElementById('role-selection');
+        const librarianPassword = document.getElementById('librarian-password');
+        const passwordError = document.getElementById('password-error');
+        if (!roleSelection || !librarianPassword || !passwordError) {
+          console.error('DOM elements not found for backToRoleSelection');
+          alert('Error: Page elements not found. Please refresh.');
+          return;
+        }
+        roleSelection.style.display = 'block';
+        librarianPassword.style.display = 'none';
+        passwordError.style.display = 'none';
+        document.getElementById('librarian-password-input').value = '';
+      };
+    });
+  </script>
+</body>
+</html>
