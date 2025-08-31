@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <!--  -->
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <style>
+    .fade-in {
+      animation: fadeIn 0.5s;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .book-card {
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .book-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+    }
+  </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen transition-colors duration-300">
+  <!-- Navbar -->
+  <nav class="bg-gray-800 p-4 shadow-md fixed w-full top-0 z-10 transition-colors duration-300">
+    <div class="container mx-auto flex justify-between items-center">
+      <!-- College Logo -->
+      <div class="flex items-center">
+        <div class="h-12 w-12 mr-2 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xl">CL</div>
+        <span class="text-xl font-bold hidden md:block">College Library</span>
+      </div>
+      <!-- Hamburger Menu -->
+      <div class="relative">
+        <button onclick="toggleMenu()" class="text-white focus:outline-none flex flex-col justify-between w-8 h-6">
+          <span class="bg-white h-1 w-full rounded"></span>
+          <span class="bg-white h-1 w-full rounded"></span>
+          <span class="bg-white h-1 w-full rounded"></span>
+        </button>
+        <div id="menu" class="hidden absolute right-0 mt-2 w-48 bg-gray-700 rounded-md shadow-lg transition-colors duration-300 z-20">
+          <a href="#" onclick="showSection('dashboard')" class="block px-4 py-2 hover:bg-gray-600">Dashboard</a>
+          <a href="#" onclick="showSection('total-books')" class="block px-4 py-2 hover:bg-gray-600">Total Books</a>
+          <a href="#" onclick="showSection('available-books')" class="block px-4 py-2 hover:bg-gray-600">Available Books</a>
+          <a href="#" onclick="showSection('received-books')" class="block px-4 py-2 hover:bg-gray-600">Received Books</a>
+          <a href="#" onclick="showSection('settings')" class="block px-4 py-2 hover:bg-gray-600">Settings</a>
+          <a href="index.html" class="block px-4 py-2 hover:bg-gray-600">Back to Home</a>
+          <a href="#" onclick="logout()" class="block px-4 py-2 hover:bg-gray-600">Logout</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Login Form -->
+  <div id="login-prompt" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-20">
+    <div class="bg-gray-700 p-8 rounded-lg shadow-md w-96 transition-colors duration-300 fade-in">
+      <h2 class="text-xl font-bold mb-4">Student Login</h2>
+      <input id="login-email" type="email" placeholder="Email" class="w-full p-2 mb-4 bg-gray-800 border border-gray-600 rounded text-white transition-colors duration-300">
+      <input id="login-password" type="password" placeholder="Password" class="w-full p-2 mb-4 bg-gray-800 border border-gray-600 rounded text-white transition-colors duration-300">
+      <button onclick="login()" class="bg-blue-500 text-white px-4 py-2 rounded w-full hover:bg-blue-600 mb-2">Login</button>
+      <button onclick="showRegisterForm()" class="bg-gray-500 text-white px-4 py-2 rounded w-full hover:bg-gray-600">Register</button>
+      <p id="login-error" class="text-red-500 mt-2 hidden">Authentication error</p>
+    </div>
+  </div>
+
+  <!-- Registration Form -->
+  <div id="register-prompt" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-20 hidden">
+    <div class="bg-gray-700 p-8 rounded-lg shadow-md w-96 transition-colors duration-300 fade-in">
+      <h2 class="text-xl font-bold mb-4">Student Registration</h2>
+      <input id="register-name" type="text" placeholder="Full Name" class="w-full p-2 mb-4 bg-gray-800 border border-gray-600 rounded text-white transition-colors duration-300">
+      <input id="register-email" type="email" placeholder="Email" class="w-full p-2 mb-4 bg-gray-800 border border-gray-600 rounded text-white transition-colors duration-300">
+      <input id="register-password" type="password" placeholder="Password (min. 6 characters)" class="w-full p-2 mb-4 bg-gray-800 border border-gray-600 rounded text-white transition-colors duration-300">
+      <input id="register-student-id" type="text" placeholder="Student ID" class="w-full p-2 mb-4 bg-gray-800 border border-gray-600 rounded text-white transition-colors duration-300">
+      <input id="register-phone" type="tel" placeholder="Phone Number" class="w-full p-2 mb-4 bg-gray-800 border border-gray-600 rounded text-white transition-colors duration-300">
+      <input id="register-class" type="text" placeholder="Class" class="w-full p-2 mb-4 bg-gray-800 border border-gray-600 rounded text-white transition-colors duration-300">
+      <button onclick="register()" class="bg-blue-500 text-white px-4 py-2 rounded w-full hover:bg-blue-600 mb-2">Register</button>
+      <button onclick="showLoginForm()" class="bg-gray-500 text-white px-4 py-2 rounded w-full hover:bg-gray-600">Back to Login</button>
+      <p id="register-error" class="text-red-500 mt-2 hidden">Registration error</p>
+      <p id="register-success" class="text-green-500 mt-2 hidden">Registration successful! Logging you in...</p>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="container mx-auto mt-20 p-4">
+    <!-- Dashboard Section -->
+    <div id="dashboard" class="section hidden fade-in">
+      <h2 class="text-2xl font-bold mb-4">Student Dashboard</h2>
+      <p class="text-gray-300 mb-4 transition-colors duration-300">View all available books in the library.</p>
+      <input id="search-dashboard-books" type="text" placeholder="Search by Title or Author" class="w-full p-2 mb-4 bg-gray-800 border border-gray-600 rounded text-white transition-colors duration-300">
+      <div id="dashboard-books-list" class="space-y-2"></div>
+    </div>
+
+    <!-- Total Books Section -->
+    <div id="total-books" class="section hidden fade-in">
+      <h2 class="text-2xl font-bold mb-4">Total Books</h2>
+      <input id="search-total-books" type="text" placeholder="Search by Title or Author" class="w-full p-2 mb-4 bg-gray-800 border border-gray-600 rounded text-white transition-colors duration-300">
+      <div id="total-books-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </div>
+
+    <!-- Available Books Section -->
+    <div id="available-books" class="section hidden fade-in">
+      <h2 class="text-2xl font-bold mb-4">Available Books</h2>
+      <input id="search-available-books" type="text" placeholder="Search by Title or Author" class="w-full p-2 mb-4 bg-gray-800 border border-gray-600 rounded text-white transition-colors duration-300">
+      <div id="available-books-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </div>
+
+    <!-- Received Books Section -->
+    <div id="received-books" class="section hidden fade-in">
+      <h2 class="text-2xl font-bold mb-4">Received Books</h2>
+      <input id="search-received-books" type="text" placeholder="Search by Book Title or Author" class="w-full p-2 mb-4 bg-gray-800 border border-gray-600 rounded text-white transition-colors duration-300">
+      <div id="received-books-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </div>
+
+    <!-- Settings Section -->
+    <div id="settings" class="section hidden fade-in">
+      <h2 class="text-2xl font-bold mb-4">Settings</h2>
+      <div class="bg-gray-700 p-4 rounded-lg transition-colors duration-300">
+        <h3 class="text-lg font-semibold mb-2">Appearance</h3>
+        <label class="inline-flex items-center">
+          <input id="theme-toggle" type="checkbox" class="form-checkbox h-5 w-5 text-blue-500">
+          <span class="ml-2 text-gray-300 transition-colors duration-300">Enable Dark Mode</span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Firebase configuration - replace with your actual config
+    const firebaseConfig = {
+     apiKey: "AIzaSyBzEgXA4JJV3Lf8bP8-adI5_xPHRghZWrI",
+  authDomain: "collegelibrary-2cb3f.firebaseapp.com",
+  projectId: "collegelibrary-2cb3f",
+  storageBucket: "collegelibrary-2cb3f.firebasestorage.app",
+  messagingSenderId: "431945484865",
+  appId: "1:431945484865:web:6c71972cc4fde6a107d4c0",
+  measurementId: "G-QW89HR0EQW"
+    };
+    
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    
+    // Authentication state observer
+    auth.onAuthStateChanged((user) => {
+      if (user) {
+        // User is signed in
+        console.log("User logged in:", user.email);
+        currentStudentId = user.uid;
+        localStorage.setItem('currentStudentId', currentStudentId);
+        document.getElementById('login-prompt').style.display = 'none';
+        document.getElementById('register-prompt').style.display = 'none';
+        showSection('dashboard');
+        
+        // Load user data from Firestore
+        loadUserData(user.uid);
+      } else {
+        // User is signed out
+        console.log("User signed out");
+        currentStudentId = null;
+        localStorage.removeItem('currentStudentId');
+        document.getElementById('login-prompt').style.display = 'flex';
+      }
+    });
+    
+    // Login function
+    window.login = function() {
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+      const errorElement = document.getElementById('login-error');
+      
+      if (!email || !password) {
+        errorElement.textContent = 'Please enter both email and password';
+        errorElement.style.display = 'block';
+        return;
+      }
+      
+      auth.signInWithEmailAndPassword(email, password)
+        .then((userCredential) => {
+          // Signed in successfully - handled by onAuthStateChanged
+          errorElement.style.display = 'none';
+        })
+        .catch((error) => {
+          errorElement.textContent = error.message;
+          errorElement.style.display = 'block';
+        });
+    };
+    
+    // Register function
+    window.register = function() {
+      const name = document.getElementById('register-name').value;
+      const email = document.getElementById('register-email').value;
+      const password = document.getElementById('register-password').value;
+      const studentId = document.getElementById('register-student-id').value;
+      const phone = document.getElementById('register-phone').value;
+      const studentClass = document.getElementById('register-class').value;
+      const errorElement = document.getElementById('register-error');
+      const successElement = document.getElementById('register-success');
+      
+      // Validate inputs
+      if (!name || !email || !password || !studentId) {
+        errorElement.textContent = 'Please fill all required fields';
+        errorElement.style.display = 'block';
+        return;
+      }
+      
+      if (password.length < 6) {
+        errorElement.textContent = 'Password must be at least 6 characters';
+        errorElement.style.display = 'block';
+        return;
+      }
+      
+      // Show loading state
+      successElement.textContent = 'Creating your account...';
+      successElement.style.display = 'block';
+      errorElement.style.display = 'none';
+      
+      // Create user with email and password
+      auth.createUserWithEmailAndPassword(email, password)
+        .then((userCredential) => {
+          // User created successfully
+          const user = userCredential.user;
+          successElement.textContent = 'Registration successful! Saving your details...';
+          
+          // Save additional user data to Firestore
+          return db.collection('students').doc(user.uid).set({
+            name: name,
+            email: email,
+            studentId: studentId,
+            phone: phone,
+            class: studentClass,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        })
+        .then(() => {
+          // Registration complete - user is automatically logged in by onAuthStateChanged
+          successElement.textContent = 'Registration complete! Logging you in...';
+          
+          // Clear form
+          document.getElementById('register-name').value = '';
+          document.getElementById('register-email').value = '';
+          document.getElementById('register-password').value = '';
+          document.getElementById('register-student-id').value = '';
+          document.getElementById('register-phone').value = '';
+          document.getElementById('register-class').value = '';
+        })
+        .catch((error) => {
+          successElement.style.display = 'none';
+          errorElement.textContent = error.message;
+          errorElement.style.display = 'block';
+        });
+    };
+    
+    // Form navigation functions
+    window.showRegisterForm = function() {
+      document.getElementById('login-prompt').style.display = 'none';
+      document.getElementById('register-prompt').style.display = 'flex';
+      // Clear any error messages
+      document.getElementById('register-error').style.display = 'none';
+      document.getElementById('register-success').style.display = 'none';
+    };
+    
+    window.showLoginForm = function() {
+      document.getElementById('register-prompt').style.display = 'none';
+      document.getElementById('login-prompt').style.display = 'flex';
+      // Clear any error messages
+      document.getElementById('login-error').style.display = 'none';
+    };
+    
+    // Logout function
+    window.logout = function() {
+      auth.signOut()
+        .then(() => {
+          console.log("User signed out");
+        })
+        .catch((error) => {
+          console.error("Sign out error:", error);
+        });
+    };
+    
+    // Load user data from Firestore
+    function loadUserData(userId) {
+      db.collection('students').doc(userId).get()
+        .then((doc) => {
+          if (doc.exists) {
+            const userData = doc.data();
+            console.log("User data:", userData);
+            // Update UI with user data
+            document.querySelector('nav .text-xl').textContent = `Welcome, ${userData.name}`;
+          } else {
+            console.log("No user data found");
+          }
+        })
+        .catch((error) => {
+          console.error("Error getting user data:", error);
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Mock Data
+      const books = [
+        { id: "B001", title: "Calculus", author: "James Stewart", quantity: 5, available: 3 },
+        { id: "B002", title: "Physics", author: "David Halliday", quantity: 4, available: 1 },
+        { id: "B003", title: "Chemistry", author: "Raymond Chang", quantity: 6, available: 6 },
+        { id: "B004", title: "Biology", author: "Neil Campbell", quantity: 3, available: 2 },
+        { id: "B005", title: "Computer Science", author: "John Doe", quantity: 7, available: 5 },
+        { id: "B006", title: "Mathematics", author: "George Thomas", quantity: 5, available: 3 }
+      ];
+
+      const studentBorrowing = [
+        { studentId: "S001", name: "John Doe", phone: "123-456-7890", class: "BSc CS", bookId: "B001", bookTitle: "Calculus", borrowDate: "2025-08-01" },
+        { studentId: "S002", name: "Jane Smith", phone: "987-654-3210", class: "BSc Physics", bookId: "B002", bookTitle: "Physics", borrowDate: "2025-08-02" }
+      ];
+
+      let currentStudentId = localStorage.getItem('currentStudentId') || null;
+
+      // Theme Management
+      const applyTheme = (isDark) => {
+        const body = document.body;
+        const nav = document.querySelector('nav');
+        const menu = document.getElementById('menu');
+        const cards = document.querySelectorAll('.bg-gray-700');
+        const inputs = document.querySelectorAll('input');
+        const textElements = document.querySelectorAll('.text-gray-300');
+        const prompts = document.querySelectorAll('#login-prompt > div, #register-prompt > div');
+        
+        if (isDark) {
+          body.classList.remove('bg-gray-100', 'text-gray-900');
+          body.classList.add('bg-gray-900', 'text-white');
+          nav.classList.remove('bg-gray-200');
+          nav.classList.add('bg-gray-800');
+          if (menu) {
+            menu.classList.remove('bg-gray-300');
+            menu.classList.add('bg-gray-700');
+          }
+          cards.forEach(card => {
+            card.classList.remove('bg-gray-300');
+            card.classList.add('bg-gray-700');
+          });
+          inputs.forEach(input => {
+            input.classList.remove('bg-gray-200', 'border-gray-400', 'text-gray-900');
+            input.classList.add('bg-gray-800', 'border-gray-600', 'text-white');
+          });
+          textElements.forEach(el => {
+            el.classList.remove('text-gray-600');
+            el.classList.add('text-gray-300');
+          });
+          prompts.forEach(prompt => {
+            prompt.classList.remove('bg-gray-300');
+            prompt.classList.add('bg-gray-700');
+          });
+        } else {
+          body.classList.remove('bg-gray-900', 'text-white');
+          body.classList.add('bg-gray-100', 'text-gray-900');
+          nav.classList.remove('bg-gray-800');
+          nav.classList.add('bg-gray-200');
+          if (menu) {
+            menu.classList.remove('bg-gray-700');
+            menu.classList.add('bg-gray-300');
+          }
+          cards.forEach(card => {
+            card.classList.remove('bg-gray-700');
+            card.classList.add('bg-gray-300');
+          });
+          inputs.forEach(input => {
+            input.classList.remove('bg-gray-800', 'border-gray-600', 'text-white');
+            input.classList.add('bg-gray-200', 'border-gray-400', 'text-gray-900');
+          });
+          textElements.forEach(el => {
+            el.classList.remove('text-gray-300');
+            el.classList.add('text-gray-600');
+          });
+          prompts.forEach(prompt => {
+            prompt.classList.remove('bg-gray-700');
+            prompt.classList.add('bg-gray-300');
+          });
+        }
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        console.log('Applied theme:', isDark ? 'dark' : 'light');
+      };
+
+      // Initialize Theme
+      const savedTheme = localStorage.getItem('theme') || 'dark';
+      const themeToggle = document.getElementById('theme-toggle');
+      if (themeToggle) {
+        themeToggle.checked = savedTheme === 'dark';
+        applyTheme(savedTheme === 'dark');
+        themeToggle.addEventListener('change', () => {
+          applyTheme(themeToggle.checked);
+        });
+      }
+
+      // Toggle Hamburger Menu
+      window.toggleMenu = function() {
+        const menu = document.getElementById('menu');
+        if (menu) {
+          menu.classList.toggle('hidden');
+          console.log('Menu toggled:', menu.classList.contains('hidden') ? 'Hidden' : 'Visible');
+        } else {
+          console.error('Menu element not found');
+        }
+      };
+
+      // Show Section
+      window.showSection = function(sectionId) {
+        console.log('Showing section:', sectionId);
+        
+        // Always allow access to settings
+        if (sectionId !== 'settings' && !currentStudentId) {
+          console.log('No user logged in, showing login prompt');
+          document.getElementById('login-prompt').style.display = 'flex';
+          return;
+        }
+        
+        const sections = ['dashboard', 'total-books', 'available-books', 'received-books', 'settings'];
+        sections.forEach(id => {
+          const section = document.getElementById(id);
+          if (section) {
+            section.style.display = id === sectionId ? 'block' : 'none';
+          } else {
+            console.error(`Section ${id} not found`);
+          }
+        });
+        
+        const menu = document.getElementById('menu');
+        if (menu) menu.classList.add('hidden');
+        
+        if (sectionId === 'dashboard') {
+          displayDashboardBooks('');
+        } else if (sectionId === 'total-books') {
+          displayTotalBooks('');
+        } else if (sectionId === 'available-books') {
+          displayAvailableBooks('');
+        } else if (sectionId === 'received-books') {
+          displayReceivedBooks('');
+        }
+      };
+
+      // Display Dashboard Books (Full-width, title and author only)
+      function displayDashboardBooks(searchTerm) {
+        const container = document.getElementById('dashboard-books-list');
+        if (!container) {
+          console.error('Dashboard books list container not found');
+          return;
+        }
+        container.innerHTML = '';
+        const filteredBooks = books.filter(book =>
+          book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          book.author.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        
+        if (filteredBooks.length === 0) {
+          container.innerHTML = '<p class="text-gray-400 text-center py-4">No books found</p>';
+          return;
+        }
+        
+        filteredBooks.forEach(book => {
+          const card = document.createElement('div');
+          card.className = 'bg-gray-700 p-4 rounded-lg shadow-md w-full transition-colors duration-300 book-card';
+          card.innerHTML = `
+            <h3 class="text-lg font-semibold">${book.title}</h3>
+            <p class="text-gray-300 transition-colors duration-300">Author: ${book.author}</p>
+            <p class="text-gray-300 transition-colors duration-300">Available: ${book.available}/${book.quantity}</p>
+          `;
+          container.appendChild(card);
+        });
+        console.log('Displayed dashboard books:', filteredBooks.length);
+      }
+
+      // Display Total Books
+      function displayTotalBooks(searchTerm) {
+        const container = document.getElementById('total-books-list');
+        if (!container) {
+          console.error('Total books list container not found');
+          return;
+        }
+        container.innerHTML = '';
+        const filteredBooks = books.filter(book =>
+          book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          book.author.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        
+        if (filteredBooks.length === 0) {
+          container.innerHTML = '<p class="text-gray-400 text-center py-4 col-span-full">No books found</p>';
+          return;
+        }
+        
+        filteredBooks.forEach(book => {
+          const card = document.createElement('div');
+          card.className = 'bg-gray-700 p-4 rounded-lg shadow-md transition-colors duration-300 book-card';
+          card.innerHTML = `
+            <h3 class="text-lg font-semibold">${book.title}</h3>
+            <p class="text-gray-300 transition-colors duration-300">Author: ${book.author}</p>
+            <p class="text-gray-300 transition-colors duration-300">ID: ${book.id}</p>
+            <p class="text-gray-300 transition-colors duration-300">Total Quantity: ${book.quantity}</p>
+            <p class="text-gray-300 transition-colors duration-300">Available: ${book.available}</p>
+          `;
+          container.appendChild(card);
+        });
+        console.log('Displayed total books:', filteredBooks.length);
+      }
+
+      // Display Available Books
+      function displayAvailableBooks(searchTerm) {
+        const container = document.getElementById('available-books-list');
+        if (!container) {
+          console.error('Available books list container not found');
+          return;
+        }
+        container.innerHTML = '';
+        const availableBooks = books.filter(book =>
+          book.available > 0 &&
+          (book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+           book.author.toLowerCase().includes(searchTerm.toLowerCase()))
+        );
+        
+        if (availableBooks.length === 0) {
+          container.innerHTML = '<p class="text-gray-400 text-center py-4 col-span-full">No available books found</p>';
+          return;
+        }
+        
+        availableBooks.forEach(book => {
+          const card = document.createElement('div');
+          card.className = 'bg-gray-700 p-4 rounded-lg shadow-md transition-colors duration-300 book-card';
+          card.innerHTML = `
+            <h3 class="text-lg font-semibold">${book.title}</h3>
+            <p class="text-gray-300 transition-colors duration-300">Author: ${book.author}</p>
+            <p class="text-gray-300 transition-colors duration-300">ID: ${book.id}</p>
+            <p class="text-gray-300 transition-colors duration-300">Available: ${book.available}</p>
+          `;
+          container.appendChild(card);
+        });
+        console.log('Displayed available books:', availableBooks.length);
+      }
+
+      // Display Received Books
+      function displayReceivedBooks(searchTerm) {
+        const container = document.getElementById('received-books-list');
+        if (!container) {
+          console.error('Received books list container not found');
+          return;
+        }
+        container.innerHTML = '';
+        const receivedBooks = studentBorrowing
+          .filter(student => student.studentId === currentStudentId)
+          .map(student => ({
+            title: student.bookTitle,
+            author: books.find(book => book.id === student.bookId)?.author || 'Unknown',
+            borrowDate: student.borrowDate
+          }))
+          .filter(book =>
+            book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            book.author.toLowerCase().includes(searchTerm.toLowerCase())
+          );
+        
+        if (receivedBooks.length === 0) {
+          container.innerHTML = '<p class="text-gray-400 text-center py-4 col-span-full">No received books found</p>';
+          return;
+        }
+        
+        receivedBooks.forEach(book => {
+          const card = document.createElement('div');
+          card.className = 'bg-gray-700 p-4 rounded-lg shadow-md transition-colors duration-300 book-card';
+          card.innerHTML = `
+            <h3 class="text-lg font-semibold">${book.title}</h3>
+            <p class="text-gray-300 transition-colors duration-300">Author: ${book.author}</p>
+            <p class="text-gray-300 transition-colors duration-300">Borrow Date: ${book.borrowDate}</p>
+          `;
+          container.appendChild(card);
+        });
+        console.log('Displayed received books for student', currentStudentId, ':', receivedBooks.length);
+      }
+
+      // Search Event Listeners
+      document.getElementById('search-dashboard-books')?.addEventListener('input', (e) => {
+        displayDashboardBooks(e.target.value);
+      });
+      document.getElementById('search-total-books')?.addEventListener('input', (e) => {
+        displayTotalBooks(e.target.value);
+      });
+      document.getElementById('search-available-books')?.addEventListener('input', (e) => {
+        displayAvailableBooks(e.target.value);
+      });
+      document.getElementById('search-received-books')?.addEventListener('input', (e) => {
+        displayReceivedBooks(e.target.value);
+      });
+
+      // Initialize - check if user is logged in
+      if (!currentStudentId) {
+        document.getElementById('login-prompt').style.display = 'flex';
+      } else {
+        showSection('dashboard');
+      }
+    });
+  </script>
+</body>
+</html>
